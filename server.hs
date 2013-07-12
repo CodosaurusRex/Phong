@@ -5,6 +5,7 @@ import Control.Concurrent (threadDelay)
 import Data.Serialize
 import Graphics.Gloss
 import Data.Either.Unwrap
+import PhongCommon
 
 data Player = Player Point
      	      	     Vector --movement 
@@ -51,15 +52,20 @@ main = withContext 1 $ \context -> do
        bind leftp "tcp://*:1618"
        withSocket context Rep $ \rightp -> do
             bind rightp "tcp://*:3141"
-	    Prelude.putStrLn "Connected."
-	    (poll [S rightp In, S leftp In] (-1) >>= mapM_ (\(S s _) -> handleSocket s))
-            --forever $ do
+	     Prelude.putStrLn "Connected."
+	    forever $ do
+	    	    (poll [S rightp In, S leftp In] (-1) >>= mapM_ (\(S s _) -> handleSocket s))
+           
                -- putStrLn 
 
 handleSocket :: Socket a -> IO()
 handleSocket s = do
-			inp <- receive s []
+			inp <- decode(receive s [])
+			case inp of
+			     PosUpdate (x,y) = print (x,y)
+			     StateUp = print "Current World" 	     
 			send s (encode (initi))[]
 			return ()
 initi :: World
 initi = World (Ball (0,0) (10,0)) (Player (-200,0) (0,0)) (Player (200,0)(0,0))
+

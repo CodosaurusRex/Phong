@@ -8,6 +8,7 @@ import Data.ByteString.Char8 hiding (putStrLn, getLine, putStrLn)
 import System.IO
 import Control.Monad
 import Data.Word
+import PhongCommon
 
 
 main = do
@@ -19,7 +20,7 @@ main = do
     		 	    connect socket ("tcp://localhost:" ++ name)
 			    Prelude.putStrLn "Connected"
 			    init <- initWorld socket
-       			    --playIO (InWindow "Pong" (1000, 1000) (10,10)) black 10 (init) (makePic socket)(moveit socket) (stepWorld socket)
+       			    playIO (InWindow "Pong" (1000, 1000) (10,10)) black 10 (init) (makePic socket)(moveit socket) (stepWorld socket)
 			    putStrLn (show init)
 			    
 
@@ -33,9 +34,9 @@ reqStateUp socket = do
 	case decode reply of 
 	     Right w -> return w
 	     Left s -> error ("gtfo" ++ s)
-reqMove :: Socket Req -> Point -> IO World
+reqMove :: Socket Req -> Request -> IO World
 reqMove socket pos = do
-	send socket (encode ()) []
+	send socket (encode (pos)) []
 	reply <-receive socket []
 	case decode reply of 
 	     Right w -> return w

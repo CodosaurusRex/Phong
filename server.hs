@@ -4,6 +4,8 @@ import Data.ByteString
 import Control.Concurrent (threadDelay)
 import Data.Serialize
 import Graphics.Gloss
+import Control.Concurrent.STM
+
 
 data Player = Player Point
      	      	     Vector --movement 
@@ -45,13 +47,14 @@ instance Serialize Player where
 
 main :: IO ()
 main = withContext 1 $ \context -> do
-    Prelude.putStrLn "Connecting to Clients..."
-   -- withSocket context Rep $ \left -> do
-       -- connect left "tcp://localhost:1618"
-    withSocket context Rep $ \rightp -> do
-            bind rightp "tcp://*:3141"
-	    Prelude.putStrLn "Connected."
-	    message <- receive rightp []
+  
+  Prelude.putStrLn "Connecting to Clients..."
+  -- withSocket context Rep $ \left -> do
+  -- connect left "tcp://localhost:1618"
+  withSocket context Rep $ \rightp -> do
+    bind rightp "tcp://*:3141"
+    Prelude.putStrLn "Connected."
+    message <- receive rightp []
 	    send rightp (encode (initi))[]
             --forever $ do
                -- putStrLn 

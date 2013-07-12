@@ -2,6 +2,7 @@ module PhongCommon where
 
 import Graphics.Gloss
 import Data.ByteString.Char8 hiding (putStrLn)
+import Data.Serialize
 
 data Request = PosUpdate (Point) | StateUp
 
@@ -28,6 +29,7 @@ data GameBoard = GameBoard { roomHeight  :: Double
                            , roomCenter  :: (Double,Double)
                            , paddleWidth :: Double
                            , paddleHeight :: Double
+                           , ballRadius  :: Double
                            }
                  deriving (Eq, Show)
 
@@ -36,9 +38,9 @@ defaultBoard = GameBoard 200 200 (0,0) 10 50
 
 instance Serialize World where
 	 put (World b p1 p2 r)   = do put b
-                                    put p1
-                                    put p2
-                                    put r
+                                      put p1
+                                      put p2
+                                      put r
 	 get		 = 	 do  b <- get
 	    	    	  	     p1 <- get
 				     p2 <- get

@@ -1,9 +1,10 @@
 import System.ZMQ
 import Control.Monad (forever)
-import Data.ByteString
+import Data.ByteString hiding (putStrLn)
 import Control.Concurrent (threadDelay)
 import Data.Serialize
 import Graphics.Gloss
+import Data.Either.Unwrap
 
 data Player = Player Point
      	      	     Vector --movement 
@@ -46,15 +47,19 @@ instance Serialize Player where
 main :: IO ()
 main = withContext 1 $ \context -> do
     Prelude.putStrLn "Connecting to Clients..."
-   -- withSocket context Rep $ \left -> do
-       -- connect left "tcp://localhost:1618"
-    withSocket context Rep $ \rightp -> do
+    withSocket context Rep $ \leftp -> do
+       bind leftp "tcp://*:1618"
+       withSocket context Rep $ \rightp -> do
             bind rightp "tcp://*:3141"
 	    Prelude.putStrLn "Connected."
-	    message <- receive rightp []
-	    send rightp (encode (initi))[]
+	    (poll [S rightp In, S leftp In] (-1) >>= mapM_ (\(S s _) -> handleSocket s))
             --forever $ do
                -- putStrLn 
 
+handleSocket :: Socket a -> IO()
+handleSocket s = do
+			inp <- receive s []
+			send s (encode (initi))[]
+			return ()
 initi :: World
 initi = World (Ball (0,0) (10,0)) (Player (-200,0) (0,0)) (Player (200,0)(0,0))

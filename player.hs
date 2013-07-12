@@ -4,7 +4,7 @@ import Graphics.Gloss.Interface.IO.Game
 import Data.Serialize
 import Data.Either.Unwrap
 import System.ZMQ
-import Data.ByteString.Char8 hiding (putStrLn)
+import Data.ByteString.Char8 hiding (putStrLn, getLine, putStrLn)
 import System.IO
 import Control.Monad
 import Data.Word
@@ -63,8 +63,10 @@ instance Serialize Request where
 main = do
 	withContext 1 $ \context -> do  
      		 System.IO.putStrLn "Connecting to Pong server..."  
+		 System.IO.putStrLn "Please input which player you'd like to be (3141 for right, 1618 for left)"
+		 name <- getLine
   		 withSocket context Req $ \socket -> do
-    		 	    connect socket "tcp://localhost:3141"
+    		 	    connect socket ("tcp://localhost:" ++ name)
 			    Prelude.putStrLn "Connected"
 			    init <- initWorld socket
        			    --playIO (InWindow "Pong" (1000, 1000) (10,10)) black 10 (init) (makePic socket)(moveit socket) (stepWorld socket)

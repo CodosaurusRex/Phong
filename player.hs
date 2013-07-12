@@ -9,56 +9,6 @@ import System.IO
 import Control.Monad
 import Data.Word
 
-data Request = PosUpdate (Point) | StateUp
-
-data Player = Player Point
-     	      	     Vector --movement 
-		     	    	       deriving (Show, Read)
-data Ball = Ball 
-     	    {  point::  (Float, Float) --place in space
-     	      ,vector:: (Float, Float) --movement Vector
-	    } 
-					 deriving (Show, Read)
-data World = World
-     	   { ball :: Ball
-	    ,player1 :: Player
-	    ,player2 :: Player
-	   } deriving (Show, Read)
-
-instance Serialize World where
-	 put (World b p1 p2)   = do put b
-                                    put p1
-                                    put p2
-	 get		 = 	 do  b <- get
-	    	    	  	     p1 <- get
-				     p2 <- get
-				     return (World b p1 p2) 
-
-instance Serialize Ball where
-	 put (Ball (x,y) (a,b)) = do  put (x,y)
-	     	   	 	      put (a,b)
-	 get = 			do (x,y) <- get
-	    	    	  	   (a,b) <- get
-				   return (Ball (x,y) (a,b))
-
-instance Serialize Player where
-	 put (Player (x,y) (a,b)) = do put (x,y)
-	     	     	   	       put (a, b)
-	 get = 			    do (x,y) <- get
-	    	    	  	       (a,b) <- get
-				       return (Player (x,y) (a,b))	  
-
-instance Serialize Request where
-	 put (PosUpdate p)	= do (put (0 :: Word8))
-	     			     (put p)
-
-	 put (StateUp)		= put (1 :: Word8)
-	 
-	 get = do t <- get :: Get Word8
-                  case t of
-                     0 -> do p <- get
-                             return (PosUpdate p)
-                     1 -> return (StateUp)
 
 main = do
 	withContext 1 $ \context -> do  

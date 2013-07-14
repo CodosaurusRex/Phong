@@ -79,5 +79,4 @@ movePaddle (PosUpdate p (x,y)) wt =
                         Left () -> 
                           w {player2 = p2 {padpoint=  (x, y)}}
                   writeTVar wt newWorld
-                                                    
- 
+

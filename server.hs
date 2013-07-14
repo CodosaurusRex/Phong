@@ -14,12 +14,6 @@ import Control.Concurrent.STM
 
 main :: IO ()
 main = withContext 1 $ \context -> do
-  {-Prelude.putStrLn' "Connecting to Clients..."
-  withSocket context Rep $ \leftp -> do
-    bind leftp "tcp://*:7001"
-    withSocket context Rep $ \rightp -> do
-      bind rightp "tcp://*:7000"
-      Prelude.putStrLn' "Connected."-}
       myWorld <- atomically $ newTVar initi
       putStrLn' "Connecting to Clients..."
       withSocket context Rep $ \leftp -> do
@@ -27,20 +21,18 @@ main = withContext 1 $ \context -> do
         withSocket context Rep $ \rightp -> do
           bind rightp "tcp://*:9111"
           putStrLn' "Bound."
-          -- message <- receive rightp [] -- This was a test line.  Doesn't stay in full program
-          -- send rightp (encode (initi))[]
           putStrLn' "Done initializing."
           forkIO $ runThroughTime 0.5 myWorld
           -- Poll for messages from leftp and rightp
           forever $ do
-            (poll [S rightp In, S leftp In] (-1) >>= mapM_ (\(S s _) -> handleSocket s myWorld))           
-            -- putStrLn' 
-
+            handleSocket leftp myWorld
+            handleSocket rightp myWorld
+            threadDelay 10000
 
 handleSocket :: Socket a ->TVar World-> IO()
 handleSocket s w = do
   putStrLn' "handle"			
-  inp <- receive s []
+  inp <- receive s [NoBlock]
   putStrLn' "Yo this thing is working soooo"
   let a = fromRight $ decode(inp)
   case decode(inp) of
@@ -51,8 +43,7 @@ handleSocket s w = do
       world <- atomically $ readTVar w
       send s (encode(world))[] 	     
     Left b -> do 
-      print b                           
-      print $ inp
+      return ()
 	
 initi :: World
 initi = World (Ball (0,0) (10,0)) (Player (-200,0) 0) (Player (200,0) 0) True

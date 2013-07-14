@@ -10,10 +10,14 @@ import Control.Monad
 import Data.Word
 import PhongCommon
 import System.Environment
+import System.Time
+import Control.Concurrent.STM
 
 
 main = 	withContext 1 $ \context -> do
   (ip:name:_) <- getArgs
+  t0 <- getClockTime
+  t0' <- newTVarIO t0 
   putStrLn' "Connecting to Pong server..."  
   let which = case name of
         "9111" -> Right ()
@@ -22,7 +26,7 @@ main = 	withContext 1 $ \context -> do
     connect socket ("tcp://" ++ ip ++ ":" ++ name)
     putStrLn' "Connected"
     init <- initWorld socket
-    playIO (InWindow "Pong" (1000, 1000) (10,10)) white 10 (init) (makePic socket)(moveit socket which) (stepWorld socket)
+    playIO (InWindow "Pong" (1000, 1000) (10,10)) white 10 (init) (makePic socket)(moveit t0' socket which) (stepWorld socket)
   			    
 
 reqStateUp :: Socket Req -> IO World
@@ -32,7 +36,7 @@ reqStateUp socket = do
 	putStrLn' "sent stateupdate request"
 	reply <-receive socket []
 	putStrLn' "received stateupdate reply from server"
-        print (decode reply :: Either String World)
+--        print (decode reply :: Either String World)
 	case decode reply of 
 	     Right w -> return w
 	     Left s -> error ("gtfo" ++ s)
@@ -64,11 +68,17 @@ drawB (Ball (x,y) _) = Translate x y $ Circle 50
 drawp :: Player -> Picture
 drawp (Player (x,y) _) = Translate x y $ polygon (rectanglePath 20 100)
 
-moveit :: Socket Req-> WhichPaddle->Event -> World -> IO World
-moveit s which (EventMotion(x, y)) _ =  reqMove s (PosUpdate which (x,y))
-moveit s which a w = return w
+moveit :: TVar ClockTime -> Socket Req-> WhichPaddle->Event -> World -> IO World
+moveit t0' s which (EventMotion(x, y)) w =  do
+  t1 <- getClockTime
+  dt <- atomically $ do
+        t0 <- readTVar t0'
+        writeTVar t0' t1
+        return $ diffClockTimes t1 t0
+  if dt > (TimeDiff 0 0 0 0 0 0 500000000000) -- 500 milliseconds
+    then reqMove s (PosUpdate which (x,y))
+    else return w
+moveit _ s which a w = return w -- Ignore all except mouse motion events
 
 stepWorld :: Socket Req-> Float -> World -> IO World
 stepWorld s f w = return w  
-
-putStrLn' = const $ return ()

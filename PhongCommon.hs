@@ -86,6 +86,7 @@ instance Serialize Request where
                      2 -> return (ToggleRunning)
                      n -> error $ "Tried to decode unknown constructor: #" ++ show n
 
+putStrLn' :: String -> IO ()
 putStrLn' = const $ return ()
 
 {-

@@ -1,6 +1,6 @@
 import System.ZMQ
 import Control.Monad (forever)
-import Data.ByteString hiding (putStrLn)
+import Data.ByteString hiding (putStrLn')
 import Control.Concurrent (threadDelay)
 import Data.Serialize
 import Graphics.Gloss
@@ -14,34 +14,34 @@ import Control.Concurrent.STM
 
 main :: IO ()
 main = withContext 1 $ \context -> do
-  {-Prelude.putStrLn "Connecting to Clients..."
+  {-Prelude.putStrLn' "Connecting to Clients..."
   withSocket context Rep $ \leftp -> do
     bind leftp "tcp://*:7001"
     withSocket context Rep $ \rightp -> do
       bind rightp "tcp://*:7000"
-      Prelude.putStrLn "Connected."-}
+      Prelude.putStrLn' "Connected."-}
       myWorld <- atomically $ newTVar initi
-      Prelude.putStrLn "Connecting to Clients..."
+      Prelude.putStrLn' "Connecting to Clients..."
       withSocket context Rep $ \leftp -> do
         bind leftp "tcp://*:7201"
         withSocket context Rep $ \rightp -> do
           bind rightp "tcp://*:9111"
-          Prelude.putStrLn "Bound."
+          Prelude.putStrLn' "Bound."
           -- message <- receive rightp [] -- This was a test line.  Doesn't stay in full program
           -- send rightp (encode (initi))[]
-          putStrLn "Done initializing."
+          putStrLn' "Done initializing."
           forkIO $ runThroughTime 0.5 myWorld
           -- Poll for messages from leftp and rightp
           forever $ do
             (poll [S rightp In, S leftp In] (-1) >>= mapM_ (\(S s _) -> handleSocket s myWorld))           
-            -- putStrLn 
+            -- putStrLn' 
 
 
 handleSocket :: Socket a ->TVar World-> IO()
 handleSocket s w = do
-  putStrLn "handle"			
+  putStrLn' "handle"			
   inp <- receive s []
-  putStrLn "Yo this thing is working soooo"
+  putStrLn' "Yo this thing is working soooo"
   let a = fromRight $ decode(inp)
   case decode(inp) of
     Right (PosUpdate p (x,y)) ->  do
@@ -64,7 +64,7 @@ stepWorld dt w@(World b@(Ball (x,y) v) _ _ _ ) = w { ball = Ball (x+dt,y+dt) v }
 
 runThroughTime :: Float -> TVar World -> IO ()
 runThroughTime dt worldT = forever $ do 
-  putStrLn "time steppp"
+  putStrLn' "time steppp"
   threadDelay $ floor (dt * 1000000)
   atomically $ do
     w <- readTVar worldT
@@ -80,3 +80,5 @@ movePaddle (PosUpdate p (x,y)) wt =
                           w {player2 = p2 {padpoint=  (x, y),}}
                   writeTVar wt newWorld
                                                     
+                    
+putStrLn' = const $ return ()

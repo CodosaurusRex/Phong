@@ -4,7 +4,7 @@ import Graphics.Gloss.Interface.IO.Game
 import Data.Serialize
 import Data.Either.Unwrap
 import System.ZMQ
-import Data.ByteString.Char8 hiding (putStrLn, getLine, putStrLn)
+import Data.ByteString.Char8 hiding (putStrLn', getLine, putStrLn')
 import System.IO
 import Control.Monad
 import Data.Word
@@ -14,24 +14,24 @@ import System.Environment
 
 main = 	withContext 1 $ \context -> do
   (ip:name:_) <- getArgs
-  System.IO.putStrLn "Connecting to Pong server..."  
+  putStrLn' "Connecting to Pong server..."  
   let which = case name of
         "9111" -> Right ()
         "7201" -> Left ()
   withSocket context Req $ \socket -> do
     connect socket ("tcp://" ++ ip ++ ":" ++ name)
-    Prelude.putStrLn "Connected"
+    putStrLn' "Connected"
     init <- initWorld socket
     playIO (InWindow "Pong" (1000, 1000) (10,10)) white 10 (init) (makePic socket)(moveit socket which) (stepWorld socket)
   			    
 
 reqStateUp :: Socket Req -> IO World
 reqStateUp socket = do
-	putStrLn "About to request from stateupdate"
+	putStrLn' "About to request from stateupdate"
 	send socket (encode (StateUp)) []
-	putStrLn "sent stateupdate request"
+	putStrLn' "sent stateupdate request"
 	reply <-receive socket []
-	putStrLn "received stateupdate reply from server"
+	putStrLn' "received stateupdate reply from server"
         print (decode reply :: Either String World)
 	case decode reply of 
 	     Right w -> return w
@@ -40,7 +40,7 @@ reqStateUp socket = do
              
 reqMove :: Socket Req -> Request -> IO World
 reqMove socket pos = do
-  putStrLn "move requested"
+  putStrLn' "move requested"
   send socket (encode (pos)) []
   reply <-receive socket []
   {-case decode reply of 
@@ -71,3 +71,4 @@ moveit s which a w = return w
 stepWorld :: Socket Req-> Float -> World -> IO World
 stepWorld s f w = return w  
 
+putStrLn' = const $ return ()

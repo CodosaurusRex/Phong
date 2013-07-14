@@ -22,7 +22,7 @@ main = withContext 1 $ \context -> do
           bind rightp "tcp://*:9111"
           putStrLn' "Bound."
           putStrLn' "Done initializing."
-          forkIO $ runThroughTime 0.5 myWorld
+          forkIO $ runThroughTime 0.1 myWorld
           -- Poll for messages from leftp and rightp
           forever $ do
             handleSocket leftp myWorld
@@ -43,6 +43,7 @@ handleSocket s w = do
       world <- atomically $ readTVar w
       send s (encode(world))[] 	     
     Left b -> do 
+      print "Left decode from server"
       return ()
 	
 initi :: World

@@ -32,7 +32,7 @@ reqStateUp socket = do
 	putStrLn' "sent stateupdate request"
 	reply <-receive socket []
 	putStrLn' "received stateupdate reply from server"
-        print (decode reply :: Either String World)
+        --print (decode reply :: Either String World)
 	case decode reply of 
 	     Right w -> return w
 	     Left s -> error ("gtfo" ++ s)
@@ -70,5 +70,3 @@ moveit s which a w = return w
 
 stepWorld :: Socket Req-> Float -> World -> IO World
 stepWorld s f w = return w  
-
-putStrLn' = const $ return ()

@@ -1,5 +1,7 @@
 dist/
 
+server
+player
 *.annot
 *.cmo
 *.cma

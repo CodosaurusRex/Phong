@@ -85,6 +85,9 @@ instance Serialize Request where
                      1 -> return (StateUp)
                      2 -> return (ToggleRunning)
                      n -> error $ "Tried to decode unknown constructor: #" ++ show n
+
+putStrLn' = const $ return ()
+
 {-
 instance Serialize WhichPaddle where
          

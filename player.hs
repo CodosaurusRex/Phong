@@ -11,36 +11,41 @@ import Data.Word
 import PhongCommon
 
 
-main = do
-	withContext 1 $ \context -> do  
-     		 System.IO.putStrLn "Connecting to Pong server..."  
-		 System.IO.putStrLn "Please input which player you'd like to be (3141 for right, 1618 for left)"
-		 name <- getLine
-  		 withSocket context Req $ \socket -> do
-    		 	    connect socket ("tcp://localhost:" ++ name)
-			    Prelude.putStrLn "Connected"
-			    init <- initWorld socket
-       			    playIO (InWindow "Pong" (1000, 1000) (10,10)) black 10 (init) (makePic socket)(moveit socket) (stepWorld socket)
-			    putStrLn (show init)
-			    
+main = 	withContext 1 $ \context -> do
+  System.IO.putStrLn "Connecting to Pong server..."  
+  System.IO.putStrLn "Please input which player you'd like to be (9111 for right, 7201 for left)"
+  name <- getLine
+  let which = case name of
+        "9111" -> Right ()
+        "7201" -> Left ()
+  withSocket context Req $ \socket -> do
+    connect socket ("tcp://localhost:" ++ name)
+    Prelude.putStrLn "Connected"
+    init <- initWorld socket
+    playIO (InWindow "Pong" (1000, 1000) (10,10)) white 10 (init) (makePic socket)(moveit socket which) (stepWorld socket)
+  			    
 
 reqStateUp :: Socket Req -> IO World
 reqStateUp socket = do
-	putStrLn "About to send"
+	putStrLn "About to request from stateupdate"
 	send socket (encode (StateUp)) []
-	putStrLn "sent"
+	putStrLn "sent stateupdate request"
 	reply <-receive socket []
-	putStrLn "received transmission"
+	putStrLn "received stateupdate reply from server"
+        print (decode reply :: Either String World)
 	case decode reply of 
 	     Right w -> return w
 	     Left s -> error ("gtfo" ++ s)
+             
+             
 reqMove :: Socket Req -> Request -> IO World
 reqMove socket pos = do
-	send socket (encode (pos)) []
-	reply <-receive socket []
-	case decode reply of 
-	     Right w -> return w
-	     Left s -> error ("gtfo" ++ s)
+  putStrLn "move requested"
+  send socket (encode (pos)) []
+  reply <-receive socket []
+  case decode reply of 
+    Right w -> return w
+    Left s -> error ("gtfo" ++ s)
 
 
 initWorld :: Socket Req-> IO World
@@ -48,7 +53,6 @@ initWorld socket= reqStateUp socket
 
 makePic :: Socket Req -> World -> IO Picture
 makePic socket _ = drawit `liftM` (reqStateUp socket) 
-
 drawit :: World -> Picture
 drawit (World b p1 p2 _) = Pictures [(drawB b), (drawp p1), (drawp p2)]
 
@@ -58,8 +62,9 @@ drawB (Ball (x,y) _) = Translate x y $ Circle 50
 drawp :: Player -> Picture
 drawp (Player (x,y) _) = Translate x y $ polygon (rectanglePath 20 100)
 
-moveit :: Socket Req-> Event-> World -> IO World
-moveit s (EventMotion(x, y)) _ =  reqMove s (PosUpdate (x,y))
+moveit :: Socket Req-> WhichPaddle->Event -> World -> IO World
+moveit s which (EventMotion(x, y)) _ =  reqMove s (PosUpdate which (x,y))
+moveit s which a w = return w
 
 stepWorld :: Socket Req-> Float -> World -> IO World
 stepWorld s f w = return w  

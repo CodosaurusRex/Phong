@@ -7,10 +7,14 @@ import Data.Word
 
 
 
-data Request = PosUpdate (Point) | StateUp | ToggleRunning
+data Request = PosUpdate WhichPaddle Point | StateUp | ToggleRunning deriving Show
 
-data Player = Player Point  -- Paddle Center
-     	      	     Vector -- Most recent paddle velocity
+type WhichPaddle = Either () ()
+
+data Player = Player 
+              { padpoint :: Point  -- Paddle Center
+     	      	,velocity ::    Float -- Most recent paddle velocity
+              }
             deriving (Show, Read)
                      
 data Ball = Ball 
@@ -58,15 +62,16 @@ instance Serialize Ball where
 				   return (Ball (x,y) (a,b))
 
 instance Serialize Player where
-	 put (Player (x,y) (a,b)) = do put (x,y)
-	     	     	   	       put (a, b)
+	 put (Player (x,y) v) = do put (x,y)
+                                   put (v)
 	 get = 			    do (x,y) <- get
-	    	    	  	       (a,b) <- get
-				       return (Player (x,y) (a,b))	  
+                                       v <- get
+				       return (Player (x,y) v)	  
 
 instance Serialize Request where
-	 put (PosUpdate p)	= do (put (0 :: Word8))
-	     			     (put p)
+	 put (PosUpdate w p)	= do (put (0 :: Word8))
+	     			     (put w)
+                                     (put p)
 
 	 put (StateUp)		= put (1 :: Word8)
          put (ToggleRunning)    = put (2 :: Word8)
@@ -74,7 +79,16 @@ instance Serialize Request where
 	 get = do t <- get :: Get Word8
                   case t of
                      0 -> do p <- get
-                             return (PosUpdate p)
+                             w <- get
+                             return (PosUpdate w p)
                      1 -> return (StateUp)
                      2 -> return (ToggleRunning)
                      n -> error $ "Tried to decode unknown constructor: #" ++ show n
+{-
+instance Serialize WhichPaddle where
+         
+         put (Either a b) =  put (Either a b)
+
+         get =               do Either a b <- get 
+                                return (Either a b)-}
+         

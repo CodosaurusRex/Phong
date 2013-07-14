@@ -12,90 +12,68 @@ import Graphics.Gloss
 import Control.Concurrent.STM
 
 
-
-data Player = Player Point
-     	      	     Vector --movement 
-		     	    	       deriving (Show, Read)
-data Ball = Ball 
-     	    {  point::  (Float, Float) --place in space
-     	      ,vector:: (Float, Float) --movement Vector
-	    } 
-					 deriving (Show, Read)
-data World = World
-     	   { ball :: Ball
-	    ,player1 :: Player
-	    ,player2 :: Player
-	   } deriving (Show, Read)
-
-instance Serialize World where
-	 put (World b p1 p2)   = do put b
-                                    put p1
-                                    put p2
-	 get		 = 	 do  b <- get
-	    	    	  	     p1 <- get
-				     p2 <- get
-				     return (World b p1 p2) 
-
-instance Serialize Ball where
-	 put (Ball (x,y) (a,b)) = do  put (x,y)
-	     	   	 	      put (a,b)
-	 get = 			do (x,y) <- get
-	    	    	  	   (a,b) <- get
-				   return (Ball (x,y) (a,b))
-
-instance Serialize Player where
-	 put (Player (x,y) (a,b)) = do put (x,y)
-	     	     	   	       put (a, b)
-	 get = 			    do (x,y) <- get
-	    	    	  	       (a,b) <- get
-				       return (Player (x,y) (a,b))
-
-
 main :: IO ()
 main = withContext 1 $ \context -> do
-  Prelude.putStrLn "Connecting to Clients..."
+  {-Prelude.putStrLn "Connecting to Clients..."
   withSocket context Rep $ \leftp -> do
-    bind leftp "tcp://*:1618"
+    bind leftp "tcp://*:7001"
     withSocket context Rep $ \rightp -> do
-      bind rightp "tcp://*:3141"
-      Prelude.putStrLn "Connected."
+      bind rightp "tcp://*:7000"
+      Prelude.putStrLn "Connected."-}
       myWorld <- atomically $ newTVar initi
       Prelude.putStrLn "Connecting to Clients..."
-      withSocket context Rep $ \left -> do
-        connect left "tcp://localhost:1618"
+      withSocket context Rep $ \leftp -> do
+        bind leftp "tcp://*:7201"
         withSocket context Rep $ \rightp -> do
-          bind rightp "tcp://*:3141"
+          bind rightp "tcp://*:9111"
           Prelude.putStrLn "Bound."
           -- message <- receive rightp [] -- This was a test line.  Doesn't stay in full program
           -- send rightp (encode (initi))[]
           putStrLn "Done initializing."
-          forkIO $ runThroughTime 0.1 myWorld
+          forkIO $ runThroughTime 0.5 myWorld
           -- Poll for messages from leftp and rightp
           forever $ do
-            (poll [S rightp In, S leftp In] (-1) >>= mapM_ (\(S s _) -> handleSocket s))           
+            (poll [S rightp In, S leftp In] (-1) >>= mapM_ (\(S s _) -> handleSocket s myWorld))           
             -- putStrLn 
 
 
-handleSocket :: Socket a -> IO()
-handleSocket s = do
-			inp <- decode(receive s [])
-			case inp of
-			     PosUpdate (x,y) = print (x,y)
-			     StateUp = print "Current World" 	     
-			send s (encode (initi))[]
-			return ()
+handleSocket :: Socket a ->TVar World-> IO()
+handleSocket s w = do
+  putStrLn "handle"			
+  inp <- receive s []
+  putStrLn "Yo this thing is working soooo"
+  let a = fromRight $ decode(inp)
+  case decode(inp) of
+    Right (PosUpdate p (x,y)) ->  do
+                          movePaddle a w 
+                          send s (encode "") []
+    Right (StateUp) -> do
+      world <- atomically $ readTVar w
+      send s (encode(world))[] 	     
+    Left b -> do 
+      print b                           
+      print $ inp
+	
 initi :: World
-initi = World (Ball (0,0) (10,0)) (Player (-200,0) (0,0)) (Player (200,0)(0,0))
+initi = World (Ball (0,0) (10,0)) (Player (-200,0) 0) (Player (200,0) 0) True
 
 
 -- Placeholder for real world-stepping
 stepWorld :: Float -> World -> World
-stepWorld dt w@(World b@(Ball (x,y) v) _ _ ) = w { ball = Ball (x+dt,y+dt) v }
+stepWorld dt w@(World b@(Ball (x,y) v) _ _ _ ) = w { ball = Ball (x+dt,y+dt) v }
 
 runThroughTime :: Float -> TVar World -> IO ()
-runThroughTime dt worldT = forever $ do
+runThroughTime dt worldT = forever $ do 
+  putStrLn "time steppp"
   threadDelay $ floor (dt * 1000000)
-  putStrLn "time step"
   atomically $ do
     w <- readTVar worldT
     writeTVar worldT $ stepWorld dt w
+
+movePaddle :: Request -> TVar World -> IO ()
+movePaddle (PosUpdate p (x,y)) wt = atomically $ do w@(World b p1 p2 r)<- readTVar wt
+                                                    let newWorld = case p of
+                                                         Right () -> w {player1 = (Player {padpoint= (x, y)})}
+                                                         Left () -> w {player2 = (Player {padpoint=  (x, y)})}
+                                                    writeTVar wt newWorld
+                                                    

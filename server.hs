@@ -71,9 +71,12 @@ runThroughTime dt worldT = forever $ do
     writeTVar worldT $ stepWorld dt w
 
 movePaddle :: Request -> TVar World -> IO ()
-movePaddle (PosUpdate p (x,y)) wt = atomically $ do w@(World b p1 p2 r)<- readTVar wt
-                                                    let newWorld = case p of
-                                                         Right () -> w {player1 = (Player {padpoint= (x, y)})}
-                                                         Left () -> w {player2 = (Player {padpoint=  (x, y)})}
-                                                    writeTVar wt newWorld
+movePaddle (PosUpdate p (x,y)) wt = 
+  atomically $ do w@(World b p1 p2 r)<- readTVar wt
+                  let newWorld = case p of
+                        Right () -> 
+                          w {player1 = p1 {padpoint= (x, y)}}
+                        Left () -> 
+                          w {player2 = p2 {padpoint=  (x, y),}}
+                  writeTVar wt newWorld
                                                     

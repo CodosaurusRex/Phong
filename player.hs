@@ -9,17 +9,17 @@ import System.IO
 import Control.Monad
 import Data.Word
 import PhongCommon
+import System.Environment
 
 
 main = 	withContext 1 $ \context -> do
+  (ip:name:_) <- getArgs
   System.IO.putStrLn "Connecting to Pong server..."  
-  System.IO.putStrLn "Please input which player you'd like to be (9111 for right, 7201 for left)"
-  name <- getLine
   let which = case name of
         "9111" -> Right ()
         "7201" -> Left ()
   withSocket context Req $ \socket -> do
-    connect socket ("tcp://localhost:" ++ name)
+    connect socket ("tcp://" ++ ip ++ ":" ++ name)
     Prelude.putStrLn "Connected"
     init <- initWorld socket
     playIO (InWindow "Pong" (1000, 1000) (10,10)) white 10 (init) (makePic socket)(moveit socket which) (stepWorld socket)
@@ -43,9 +43,10 @@ reqMove socket pos = do
   putStrLn "move requested"
   send socket (encode (pos)) []
   reply <-receive socket []
-  case decode reply of 
+  {-case decode reply of 
     Right w -> return w
-    Left s -> error ("gtfo" ++ s)
+    Left s -> error ("gtfo" ++ s)-}
+  reqStateUp socket
 
 
 initWorld :: Socket Req-> IO World
@@ -53,6 +54,7 @@ initWorld socket= reqStateUp socket
 
 makePic :: Socket Req -> World -> IO Picture
 makePic socket _ = drawit `liftM` (reqStateUp socket) 
+
 drawit :: World -> Picture
 drawit (World b p1 p2 _) = Pictures [(drawB b), (drawp p1), (drawp p2)]
 

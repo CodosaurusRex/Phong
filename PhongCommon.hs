@@ -10,6 +10,7 @@ import Data.Word
 data Request = PosUpdate WhichPaddle Point | StateUp | ToggleRunning deriving Show
 
 type WhichPaddle = Either () ()
+--data WhichPaddle = Left | Right
 
 data Player = Player 
               { padpoint :: Point  -- Paddle Center
@@ -78,8 +79,8 @@ instance Serialize Request where
 	 
 	 get = do t <- get :: Get Word8
                   case t of
-                     0 -> do p <- get
-                             w <- get
+                     0 -> do w <- get
+                             p <- get
                              return (PosUpdate w p)
                      1 -> return (StateUp)
                      2 -> return (ToggleRunning)
@@ -90,5 +91,5 @@ instance Serialize WhichPaddle where
          put (Either a b) =  put (Either a b)
 
          get =               do Either a b <- get 
-                                return (Either a b)-}
-         
+                                return (Either a b)
+         -}

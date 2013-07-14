@@ -75,7 +75,7 @@ moveit t0' s which (EventMotion(x, y)) w =  do
         t0 <- readTVar t0'
         writeTVar t0' t1
         return $ diffClockTimes t1 t0
-  if dt > (TimeDiff 0 0 0 0 0 0 500000000000) -- 500 milliseconds
+  if dt > (TimeDiff 0 0 0 0 0 0 10000000000) -- 500 milliseconds
     then reqMove s (PosUpdate which (x,y))
     else return w
 moveit _ s which a w = return w -- Ignore all except mouse motion events

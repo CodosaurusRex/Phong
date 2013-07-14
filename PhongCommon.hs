@@ -5,6 +5,8 @@ import Data.ByteString.Char8 hiding (putStrLn)
 import Data.Serialize
 import Data.Word
 
+
+
 data Request = PosUpdate (Point) | StateUp | ToggleRunning
 
 data Player = Player Point  -- Paddle Center

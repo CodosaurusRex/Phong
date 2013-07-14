@@ -6,6 +6,12 @@ import Data.Serialize
 import Graphics.Gloss
 import Data.Either.Unwrap
 import PhongCommon
+import Control.Concurrent (threadDelay, forkIO)
+import Data.Serialize
+import Graphics.Gloss
+import Control.Concurrent.STM
+
+
 
 data Player = Player Point
      	      	     Vector --movement 
@@ -47,16 +53,28 @@ instance Serialize Player where
 
 main :: IO ()
 main = withContext 1 $ \context -> do
-    Prelude.putStrLn "Connecting to Clients..."
-    withSocket context Rep $ \leftp -> do
-       bind leftp "tcp://*:1618"
-       withSocket context Rep $ \rightp -> do
-            bind rightp "tcp://*:3141"
-	     Prelude.putStrLn "Connected."
-	    forever $ do
-	    	    (poll [S rightp In, S leftp In] (-1) >>= mapM_ (\(S s _) -> handleSocket s))
-           
-               -- putStrLn 
+  Prelude.putStrLn "Connecting to Clients..."
+  withSocket context Rep $ \leftp -> do
+    bind leftp "tcp://*:1618"
+    withSocket context Rep $ \rightp -> do
+      bind rightp "tcp://*:3141"
+      Prelude.putStrLn "Connected."
+      myWorld <- atomically $ newTVar initi
+      Prelude.putStrLn "Connecting to Clients..."
+      withSocket context Rep $ \left -> do
+        connect left "tcp://localhost:1618"
+        withSocket context Rep $ \rightp -> do
+          bind rightp "tcp://*:3141"
+          Prelude.putStrLn "Bound."
+          -- message <- receive rightp [] -- This was a test line.  Doesn't stay in full program
+          -- send rightp (encode (initi))[]
+          putStrLn "Done initializing."
+          forkIO $ runThroughTime 0.1 myWorld
+          -- Poll for messages from leftp and rightp
+          forever $ do
+            (poll [S rightp In, S leftp In] (-1) >>= mapM_ (\(S s _) -> handleSocket s))           
+            -- putStrLn 
+
 
 handleSocket :: Socket a -> IO()
 handleSocket s = do
@@ -69,3 +87,15 @@ handleSocket s = do
 initi :: World
 initi = World (Ball (0,0) (10,0)) (Player (-200,0) (0,0)) (Player (200,0)(0,0))
 
+
+-- Placeholder for real world-stepping
+stepWorld :: Float -> World -> World
+stepWorld dt w@(World b@(Ball (x,y) v) _ _ ) = w { ball = Ball (x+dt,y+dt) v }
+
+runThroughTime :: Float -> TVar World -> IO ()
+runThroughTime dt worldT = forever $ do
+  threadDelay $ floor (dt * 1000000)
+  putStrLn "time step"
+  atomically $ do
+    w <- readTVar worldT
+    writeTVar worldT $ stepWorld dt w

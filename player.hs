@@ -50,7 +50,7 @@ makePic :: Socket Req -> World -> IO Picture
 makePic socket _ = drawit `liftM` (reqStateUp socket) 
 
 drawit :: World -> Picture
-drawit (World b p1 p2) = Pictures [(drawB b), (drawp p1), (drawp p2)]
+drawit (World b p1 p2 _) = Pictures [(drawB b), (drawp p1), (drawp p2)]
 
 drawB :: Ball -> Picture
 drawB (Ball (x,y) _) = Translate x y $ Circle 50
@@ -59,7 +59,7 @@ drawp :: Player -> Picture
 drawp (Player (x,y) _) = Translate x y $ polygon (rectanglePath 20 100)
 
 moveit :: Socket Req-> Event-> World -> IO World
-moveit s (EventMotion(x, y)) _ =  reqMove s (x,y)
+moveit s (EventMotion(x, y)) _ =  reqMove s (PosUpdate (x,y))
 
 stepWorld :: Socket Req-> Float -> World -> IO World
 stepWorld s f w = return w  

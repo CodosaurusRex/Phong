@@ -21,12 +21,12 @@ main = withContext 1 $ \context -> do
       bind rightp "tcp://*:7000"
       Prelude.putStrLn' "Connected."-}
       myWorld <- atomically $ newTVar initi
-      Prelude.putStrLn' "Connecting to Clients..."
+      putStrLn' "Connecting to Clients..."
       withSocket context Rep $ \leftp -> do
         bind leftp "tcp://*:7201"
         withSocket context Rep $ \rightp -> do
           bind rightp "tcp://*:9111"
-          Prelude.putStrLn' "Bound."
+          putStrLn' "Bound."
           -- message <- receive rightp [] -- This was a test line.  Doesn't stay in full program
           -- send rightp (encode (initi))[]
           putStrLn' "Done initializing."
@@ -77,8 +77,6 @@ movePaddle (PosUpdate p (x,y)) wt =
                         Right () -> 
                           w {player1 = p1 {padpoint= (x, y)}}
                         Left () -> 
-                          w {player2 = p2 {padpoint=  (x, y),}}
+                          w {player2 = p2 {padpoint=  (x, y)}}
                   writeTVar wt newWorld
                                                     
-                    
-putStrLn' = const $ return ()

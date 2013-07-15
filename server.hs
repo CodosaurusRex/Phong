@@ -25,14 +25,15 @@ main = withContext 1 $ \context -> do
           forkIO $ runThroughTime 0.1 myWorld
           -- Poll for messages from leftp and rightp
           forever $ do
-            handleSocket leftp myWorld
-            handleSocket rightp myWorld
-            threadDelay 10000
+            (poll [S rightp In, S leftp In] 15 >>= mapM_ (\(S s _) -> handleSocket s myWorld))
+--            handleSocket leftp myWorld
+--            handleSocket rightp myWorld
+--            threadDelay 10000
 
 handleSocket :: Socket a ->TVar World-> IO()
 handleSocket s w = do
   putStrLn' "handle"			
-  inp <- receive s [NoBlock]
+  inp <- receive s []
   putStrLn' "Yo this thing is working soooo"
   let a = fromRight $ decode(inp)
   case decode(inp) of

@@ -4,7 +4,7 @@ import Graphics.Gloss.Interface.IO.Game
 import Data.Serialize
 import Data.Either.Unwrap
 import System.ZMQ
-import Data.ByteString.Char8 hiding (putStrLn, getLine)
+import Data.ByteString.Char8 hiding (putStrLn, getLine, any)
 import System.IO
 import Control.Monad
 import Data.Word
@@ -16,6 +16,7 @@ import Control.Concurrent.STM
 
 main = 	withContext 1 $ \context -> do
   (ip:name:_) <- getArgs
+  extraRequests <- any (== "--use-extra-requests") `liftM` getArgs 
   t0 <- getClockTime
   t0' <- newTVarIO t0 
   putStrLn' "Connecting to Pong server..."  
@@ -26,7 +27,7 @@ main = 	withContext 1 $ \context -> do
     connect socket ("tcp://" ++ ip ++ ":" ++ name)
     putStrLn' "Connected"
     init <- initWorld socket
-    playIO (InWindow "Pong" (1000, 1000) (10,10)) black 10 (init) (makePic socket)(moveit t0' socket which) (stepWorld socket)
+    playIO (InWindow "Pong" (1000, 1000) (10,10)) black 10 (init) (makePic socket)(moveit t0' socket which) (stepWorld socket extraRequests)
   			    
 
 reqStateUp :: Socket Req -> IO World
@@ -80,5 +81,11 @@ moveit t0' s which (EventMotion(x, y)) w =  do
     else return w
 moveit _ s which a w = return w -- Ignore all except mouse motion events
 
-stepWorld :: Socket Req-> Float -> World -> IO World
-stepWorld s f w = return w  
+stepWorld :: Socket Req -> Bool -> Float -> World -> IO World
+stepWorld s erqs f w = case erqs of
+  False -> return w
+  True -> do
+    send s (encode StateUp) []
+    r <- receive s []
+    return $ seq r w
+    

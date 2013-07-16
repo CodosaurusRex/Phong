@@ -49,10 +49,7 @@ reqMove socket pos = do
   putStrLn' "move requested"
   send socket (encode (pos)) []
   reply <-receive socket []
-  {-case decode reply of 
-    Right w -> return w
-    Left s -> error ("gtfo" ++ s)-}
-  reqStateUp socket
+  seq reply (reqStateUp socket)
 
 
 initWorld :: Socket Req-> IO World

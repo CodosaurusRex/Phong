@@ -34,7 +34,7 @@ handleSocket :: Socket a ->TVar World-> IO()
 handleSocket s w = do
   putStrLn' "handle"			
   inp <- receive s []
-  putStrLn' "Yo this thing is working soooo"
+  seq inp (putStrLn' "Yo this thing is working soooo")
   let a = fromRight $ decode(inp)
   case decode(inp) of
     Right (PosUpdate p (x,y)) ->  do

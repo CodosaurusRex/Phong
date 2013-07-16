@@ -17,6 +17,7 @@ import Control.Concurrent.STM
 main = 	withContext 1 $ \context -> do
   (ip:name:_) <- getArgs
   extraRequests <- any (== "--use-extra-requests") `liftM` getArgs 
+  print extraRequests
   t0 <- getClockTime
   t0' <- newTVarIO t0 
   putStrLn' "Connecting to Pong server..."  
@@ -87,5 +88,6 @@ stepWorld s erqs f w = case erqs of
   True -> do
     send s (encode StateUp) []
     r <- receive s []
+    putStrLn "Sent extra request"
     return $ seq r w
     

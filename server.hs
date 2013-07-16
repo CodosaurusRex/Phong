@@ -1,6 +1,6 @@
 import System.ZMQ
 import Control.Monad (forever)
-import Data.ByteString hiding (putStrLn')
+import Data.ByteString hiding (putStrLn)
 import Control.Concurrent (threadDelay)
 import Data.Serialize
 import Graphics.Gloss

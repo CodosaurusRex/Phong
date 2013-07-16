@@ -4,7 +4,7 @@ import Graphics.Gloss.Interface.IO.Game
 import Data.Serialize
 import Data.Either.Unwrap
 import System.ZMQ
-import Data.ByteString.Char8 hiding (putStrLn', getLine, putStrLn')
+import Data.ByteString.Char8 hiding (putStrLn, getLine)
 import System.IO
 import Control.Monad
 import Data.Word

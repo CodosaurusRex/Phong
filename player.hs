@@ -86,5 +86,6 @@ stepWorld s erqs f w = case erqs of
     send s (encode StateUp) []
     r <- receive s []
     putStrLn "Sent extra request"
+    print r
     return $ seq r w
     

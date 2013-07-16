@@ -25,7 +25,7 @@ main = withContext 1 $ \context -> do
           forkIO $ runThroughTime 0.1 myWorld
           -- Poll for messages from leftp and rightp
           forever $ do
-            (poll [S rightp In, S leftp In] 15 >>= mapM_ (\(S s _) -> handleSocket s myWorld))
+            (poll [S rightp In, S leftp In] 0 >>= mapM_ (\(S s _) -> handleSocket s myWorld))
 --            handleSocket leftp myWorld
 --            handleSocket rightp myWorld
 --            threadDelay 10000

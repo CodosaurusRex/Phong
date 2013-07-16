@@ -11,6 +11,7 @@ import Data.Word
 import PhongCommon
 import System.Environment
 import System.Time
+import Control.Concurrent (forkIO)
 import Control.Concurrent.STM
 
 
@@ -28,8 +29,15 @@ main = 	withContext 1 $ \context -> do
     connect socket ("tcp://" ++ ip ++ ":" ++ name)
     putStrLn' "Connected"
     init <- initWorld socket
+    forkIO $ tightLoop socket
     playIO (InWindow "Pong" (1000, 1000) (10,10)) black 10 (init) (makePic socket)(moveit t0' socket which) (stepWorld socket extraRequests)
   			    
+
+tightLoop :: Socket Req -> IO ()
+tightLoop s = forever $ do
+  send s (encode StateUp) []
+  r <- receive s []
+  print r
 
 reqStateUp :: Socket Req -> IO World
 reqStateUp socket = do

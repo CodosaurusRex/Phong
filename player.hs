@@ -29,7 +29,7 @@ main = 	withContext 1 $ \context -> do
     putStrLn' "Connected"
     init <- initWorld socket
     playIO (InWindow "Pong" (1000, 1000) (10,10)) white 10 (init) (makePic socket)(moveit t0' socket which) (stepWorld socket extraRequests)
-  			    
+	    
 
 reqStateUp :: Socket Req -> IO World
 reqStateUp socket = do
@@ -49,10 +49,7 @@ reqMove socket pos = do
   putStrLn' "move requested"
   send socket (encode (pos)) []
   reply <-receive socket []
-  {-case decode reply of 
-    Right w -> return w
-    Left s -> error ("gtfo" ++ s)-}
-  reqStateUp socket
+  seq reply (reqStateUp socket)
 
 
 initWorld :: Socket Req-> IO World
@@ -65,10 +62,10 @@ drawit :: World -> Picture
 drawit (World b p1 p2 _) = Pictures [(drawB b), (drawp p1), (drawp p2)]
 
 drawB :: Ball -> Picture
-drawB (Ball (x,y) _) = Translate x y $ Circle 50
+drawB (Ball (x,y) _) = Color white $ Translate x y $ circleSolid 10
 
 drawp :: Player -> Picture
-drawp (Player (x,y) _) = Translate x y $ polygon (rectanglePath 20 100)
+drawp (Player (x,y) _) = Color white $Translate x y $ polygon (rectanglePath 20 100)
 
 moveit :: TVar ClockTime -> Socket Req-> WhichPaddle->Event -> World -> IO World
 moveit t0' s which (EventMotion(x, y)) w =  do

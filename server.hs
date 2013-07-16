@@ -10,7 +10,7 @@ import Control.Concurrent (threadDelay, forkIO)
 import Data.Serialize
 import Graphics.Gloss
 import Control.Concurrent.STM
-
+import Graphics.Gloss.Data.Vector
 
 main :: IO ()
 main = withContext 1 $ \context -> do
@@ -22,7 +22,7 @@ main = withContext 1 $ \context -> do
           bind rightp "tcp://*:9111"
           putStrLn' "Bound."
           putStrLn' "Done initializing."
-          forkIO $ runThroughTime 0.1 myWorld
+          forkIO $ runThroughTime 1 myWorld
           -- Poll for messages from leftp and rightp
           forever $ do
             (poll [S rightp In, S leftp In] 0 >>= mapM_ (\(S s _) -> handleSocket s myWorld))
@@ -34,7 +34,7 @@ handleSocket :: Socket a ->TVar World-> IO()
 handleSocket s w = do
   putStrLn' "handle"			
   inp <- receive s []
-  putStrLn' "Yo this thing is working soooo"
+  seq inp (putStrLn' "Yo this thing is working soooo")
   let a = fromRight $ decode(inp)
   case decode(inp) of
     Right (PosUpdate p (x,y)) ->  do
@@ -48,12 +48,12 @@ handleSocket s w = do
       return ()
 	
 initi :: World
-initi = World (Ball (0,0) (10,0)) (Player (-200,0) 0) (Player (200,0) 0) True
+initi = World (Ball (0,0) (0.1,0)) (Player (-500,0) 0) (Player (500,0) 0) True
 
 
 -- Placeholder for real world-stepping
 stepWorld :: Float -> World -> World
-stepWorld dt w@(World b@(Ball (x,y) v) _ _ _ ) = w { ball = Ball (x+dt,y+dt) v }
+stepWorld dt w@(World b@(Ball (x,y) (vx, vy)) _ _ _ ) = w { ball = Ball ((x + (dt * vx)), (y + (dt*vy))) ((vx-1),(vy-1)) }
 
 runThroughTime :: Float -> TVar World -> IO ()
 runThroughTime dt worldT = forever $ do 
@@ -68,8 +68,8 @@ movePaddle (PosUpdate p (x,y)) wt =
   atomically $ do w@(World b p1 p2 r)<- readTVar wt
                   let newWorld = case p of
                         Right () -> 
-                          w {player1 = p1 {padpoint= (x, y)}}
+                          w {player1 = p1 {padpoint= (-500, y)}}
                         Left () -> 
-                          w {player2 = p2 {padpoint=  (x, y)}}
+                          w {player2 = p2 {padpoint=  (500, y)}}
                   writeTVar wt newWorld
 

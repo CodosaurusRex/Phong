@@ -1,6 +1,5 @@
-import System.ZMQ
 import Control.Monad (forever)
-import Data.ByteString hiding (putStrLn)
+import Data.ByteString hiding (putStrLn, getLine)
 import Control.Concurrent (threadDelay)
 import Data.Serialize
 import Graphics.Gloss
@@ -11,24 +10,36 @@ import Data.Serialize
 import Graphics.Gloss
 import Control.Concurrent.STM
 import Graphics.Gloss.Data.Vector
+import Network
+import Control.Concurrent.MVar
+import GHC.IO.Handle
 
+talkWith :: Handle -> MVar () -> TVar World -> IO ()
+talkWith h syncMV w' = do
+  hSetBuffering h LineBuffering
+  forever $ do
+    _ <- takeMVar syncMV
+    line <- getLine h
+    resp <- handleRequest (read h) w'
+    putMVar syncMV ()
+
+handleRequest :: Request -> TVar World -> IO (Maybe World)
+handleRequest r@(PosUpdate _ _)  w' = movePaddle r w' >> return Nothing
+handleRequest StateUp w'            = do
+  w <- atomically $ readTVar w'
+  return $ Just w
+  
 main :: IO ()
-main = withContext 1 $ \context -> do
-      myWorld <- atomically $ newTVar initi
-      putStrLn' "Connecting to Clients..."
-      withSocket context Rep $ \leftp -> do
-        bind leftp "tcp://*:7201"
-        withSocket context Rep $ \rightp -> do
-          bind rightp "tcp://*:9111"
-          putStrLn' "Bound."
-          putStrLn' "Done initializing."
-          forkIO $ runThroughTime 1 myWorld
-          -- Poll for messages from leftp and rightp
-          forever $ do
-            (poll [S rightp In, S leftp In] 0 >>= mapM_ (\(S s _) -> handleSocket s myWorld))
---            handleSocket leftp myWorld
---            handleSocket rightp myWorld
---            threadDelay 10000
+main = do
+  myWorld <- atomically $ newTVar initi
+  putStrLn' "Accepting to Clients..."
+  sock <- listenOn (PortNumber pongPort)
+  forever $ do
+    (handle, host, port) <- accept sock
+    putStrLn $
+      unwords ["Got connection from ",show handle, show host, show port]
+    syncMV <- newMVar ()
+    forkIO $ talkWith handle syncMV
 
 handleSocket :: Socket a ->TVar World-> IO()
 handleSocket s w = do

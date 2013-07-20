@@ -1,13 +1,48 @@
 module PhongCommon where
 
 import Graphics.Gloss
+import qualified Data.ByteString as B
 import Data.ByteString.Char8 hiding (putStrLn)
 import Data.Serialize
 import Data.Word
+import Network
+import Network.Simple.TCP
+import Control.Proxy
+import Control.Proxy.TCP
 
+pongPort :: PortNumber
+pongPort = 5227
 
+sendWithSize :: (Serialize a) => Socket -> a -> IO ()
+sendWithSize sock v = do
+  let v' = encode v
+  send sock $ encode (B.length v' :: Int)
+  send sock v'
 
-data Request = PosUpdate WhichPaddle Point | StateUp | ToggleRunning deriving Show
+recvWithSize :: (Serialize a) => Socket -> IO (Either String a)
+recvWithSize sock = do
+  let intEncodedSize = B.length (encode (1 :: Int))
+  p' <- recv sock intEncodedSize
+  case p' of
+    Nothing -> return $ Left "Receive error"
+    Just v'  -> return $ decode v'
+
+socketSizedWriteD :: (Proxy p) => Socket -> x -> p x B.ByteString x B.ByteString IO r
+socketSizedWriteD sock = runIdentityK loop where
+  loop x = do
+    a <- request x
+    lift $ sendWithSize sock a
+    respond a >>= loop
+
+socketSizedReadS :: (Proxy p, Serialize a) => Socket -> () -> Producer p a IO ()
+socketSizedReadS sock () = runIdentityP loop where
+  loop = do
+    p <- lift $ recvWithSize sock
+    case p of
+      Right v -> respond v >> loop
+      Left  _ -> return ()
+
+data Request = PosUpdate WhichPaddle Point | StateUp | ToggleRunning deriving (Show, Read)
 
 type WhichPaddle = Either () ()
 --data WhichPaddle = Left | Right

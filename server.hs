@@ -1,6 +1,6 @@
-import System.ZMQ
 import Control.Monad (forever)
-import Data.ByteString hiding (putStrLn)
+import Data.ByteString hiding (putStrLn, hGetLine, hPutStrLn, hGetLine)
+import Data.ByteString.Char8
 import Control.Concurrent (threadDelay)
 import Data.Serialize
 import Graphics.Gloss
@@ -12,45 +12,48 @@ import Graphics.Gloss
 import Control.Concurrent.STM
 import Graphics.Gloss.Data.Vector
 import PhongPhysics
+import Network
+import Control.Concurrent.MVar
+import GHC.IO.Handle hiding (hGetLine)
 
+talkWith :: Handle -> MVar () -> TVar World -> IO ()
+talkWith h syncMV w' = do
+  hSetBuffering h LineBuffering
+  forever $ do
+    _ <- takeMVar syncMV
+    req' <- hGetLine h
+    case decode req' of
+      Right req -> do resp <- handleRequest req w'
+                      hPutStrLn h (encode resp)
+      Left _    -> Prelude.putStrLn $ "Bad request: " ++ show req'
+    putMVar syncMV ()
+      
+
+-- |Update or just retrieve world according to request
+handleRequest :: Request -> TVar World -> IO (Maybe World)
+handleRequest r@(PosUpdate _ _)  w' = movePaddle r w' >> return Nothing
+handleRequest ToggleRunning      w' = atomically $ do
+  w <- readTVar w'
+  writeTVar w' (w {isRunning = not(isRunning w)})
+  return Nothing
+handleRequest StateUp w'            = do
+  w <- atomically $ readTVar w'
+  return $ Just w
+  
 main :: IO ()
-main = withContext 1 $ \context -> do
-      myWorld <- atomically $ newTVar initi
-      putStrLn' "Connecting to Clients..."
-      withSocket context Rep $ \leftp -> do
-        bind leftp "tcp://*:7201"
-        withSocket context Rep $ \rightp -> do
-          bind rightp "tcp://*:9111"
-          putStrLn' "Bound."
-          putStrLn' "Done initializing."
-          forkIO $ runThroughTime 0.001 myWorld
-          -- Poll for messages from leftp and rightp
-          forever $ do
-            (poll [S rightp In, S leftp In] 0 >>= mapM_ (\(S s _) -> handleSocket s myWorld))
---            handleSocket leftp myWorld
---            handleSocket rightp myWorld
---            threadDelay 10000
+main = do
+  myWorld <- atomically $ newTVar initi
+  putStrLn' "Accepting to Clients..."
+  sock <- listenOn (PortNumber pongPort)
+  forever $ do
+    (handle, host, port) <- accept sock
+    Prelude.putStrLn $ Prelude.unwords 
+      ["Got connection from ",show handle, show host, show port]
+    syncMV <- newMVar ()
+    forkIO $ talkWith handle syncMV myWorld
 
-handleSocket :: Socket a ->TVar World-> IO()
-handleSocket s w = do
-  putStrLn' "handle"			
-  inp <- receive s []
-  seq inp (putStrLn' "Yo this thing is working soooo")
-  let a = fromRight $ decode(inp)
-  case decode(inp) of
-    Right (PosUpdate p (x,y)) ->  do
-                          movePaddle a w 
-                          send s (encode "") []
-    Right (StateUp) -> do
-      world <- atomically $ readTVar w
-      send s (encode(world))[] 	     
-    Left b -> do 
-      print "Left decode from server"
-      return ()
-	
 initi :: World
 initi = World (Ball (0,0) (180,0) (0,0)) (Player (-500,0) 0) (Player (500,0) 0) True
-
 
 -- Placeholder for real world-stepping
 stepWorld :: Float -> World -> World
@@ -74,3 +77,23 @@ movePaddle (PosUpdate p (x,y)) wt =
                           w {player2 = p2 {padpoint=  (500, y)}}
                   writeTVar wt newWorld
 
+
+{-
+-- |ZMQ-based req socket loop body
+handleSocket :: Socket a ->TVar World-> IO()
+handleSocket s w = do
+  putStrLn' "handle"			
+  inp <- receive s []
+  seq inp (putStrLn' "Yo this thing is working soooo")
+  let a = fromRight $ decode(inp)
+  case decode(inp) of
+    Right (PosUpdate p (x,y)) ->  do
+                          movePaddle a w 
+                          send s (encode "") []
+    Right (StateUp) -> do
+      world <- atomically $ readTVar w
+      send s (encode(world))[] 	     
+    Left b -> do 
+      print "Left decode from server"
+      return ()
+-}	

@@ -11,6 +11,7 @@ import Data.Serialize
 import Graphics.Gloss
 import Control.Concurrent.STM
 import Graphics.Gloss.Data.Vector
+import PhongPhysics
 
 main :: IO ()
 main = withContext 1 $ \context -> do
@@ -22,7 +23,7 @@ main = withContext 1 $ \context -> do
           bind rightp "tcp://*:9111"
           putStrLn' "Bound."
           putStrLn' "Done initializing."
-          forkIO $ runThroughTime 1 myWorld
+          forkIO $ runThroughTime 0.001 myWorld
           -- Poll for messages from leftp and rightp
           forever $ do
             (poll [S rightp In, S leftp In] 0 >>= mapM_ (\(S s _) -> handleSocket s myWorld))
@@ -48,12 +49,12 @@ handleSocket s w = do
       return ()
 	
 initi :: World
-initi = World (Ball (0,0) (0.1,0)) (Player (-500,0) 0) (Player (500,0) 0) True
+initi = World (Ball (0,0) (180,0) (0,0)) (Player (-500,0) 0) (Player (500,0) 0) True
 
 
 -- Placeholder for real world-stepping
 stepWorld :: Float -> World -> World
-stepWorld dt w@(World b@(Ball (x,y) (vx, vy)) _ _ _ ) = w { ball = Ball ((x + (dt * vx)), (y + (dt*vy))) ((vx-1),(vy-1)) }
+stepWorld dt w@(World b@(Ball (x,y) (vx, vy) score) p1 p2 _ ) = w { ball = collidePaddle (Ball ((x + (dt * vx)), (y + (dt*vy))) ((vx),(vy)) score) p1 p2}
 
 runThroughTime :: Float -> TVar World -> IO ()
 runThroughTime dt worldT = forever $ do 

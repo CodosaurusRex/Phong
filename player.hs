@@ -14,7 +14,6 @@ import System.Time
 import Control.Concurrent (forkIO)
 import Control.Concurrent.STM
 
-
 main = 	withContext 1 $ \context -> do
   (ip:name:_) <- getArgs
   extraRequests <- any (== "--use-extra-requests") `liftM` getArgs 
@@ -29,16 +28,16 @@ main = 	withContext 1 $ \context -> do
     connect socket ("tcp://" ++ ip ++ ":" ++ name)
     putStrLn' "Connected"
     init <- initWorld socket
-    forkIO $ tightLoop socket
+    --forkIO $ tightLoop socket
     playIO (InWindow "Pong" (1000, 1000) (10,10)) black 10 (init) (makePic socket)(moveit t0' socket which) (stepWorld socket extraRequests)
   			    
-
+{-
 tightLoop :: Socket Req -> IO ()
 tightLoop s = forever $ do
   send s (encode StateUp) []
   r <- receive s []
   print r
-
+-}
 reqStateUp :: Socket Req -> IO World
 reqStateUp socket = do
 	putStrLn' "About to request from stateupdate"
@@ -70,7 +69,7 @@ drawit :: World -> Picture
 drawit (World b p1 p2 _) = Pictures [(drawB b), (drawp p1), (drawp p2)]
 
 drawB :: Ball -> Picture
-drawB (Ball (x,y) _) = Color white $ Translate x y $ circleSolid 10
+drawB (Ball (x,y) _ (s1, s2)) = Pictures [Color white $ Translate x y $ circleSolid 10, Translate (-100) 485 $ Scale 0.1 0.1 $ Color white $ Text ("Score 1: " ++ (show s1)), Translate 0 485 $ Scale 0.1 0.1 $ Color white $ Text ("Score 2: " ++ (show s2))]
 
 drawp :: Player -> Picture
 drawp (Player (x,y) _) = Color white $Translate x y $ polygon (rectanglePath 20 100)

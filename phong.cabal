@@ -53,5 +53,5 @@ executable phong
   -- other-modules:       
   
   -- Other library packages from which modules are imported.
-  build-depends:       base ==4.6.*, gloss ==1.7.*, bytestring ==0.10.*, network ==2.4.*, cereal, network-simple, pipes, pipes-network, stm, either-unwrap
+  build-depends:       base ==4.6.*, gloss ==1.7.*, bytestring ==0.10.*, network ==2.4.*, cereal, network-simple, pipes, pipes-network, stm, either-unwrap, old-time
   

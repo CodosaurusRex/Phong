@@ -10,8 +10,8 @@ import Network.Simple.TCP
 import Control.Proxy
 import Control.Proxy.TCP
 
-pongPort :: String
-pongPort = "6666"
+pongPort :: PortNumber
+pongPort = 5227
 
 sendWithSize :: (Serialize a) => Socket -> a -> IO ()
 sendWithSize sock v = do

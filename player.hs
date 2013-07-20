@@ -3,7 +3,6 @@ import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Game
 import Data.Serialize
 import Data.Either.Unwrap
-import System.ZMQ
 import Data.ByteString.Char8 hiding (putStrLn, getLine, any)
 import System.IO
 import Control.Monad
@@ -13,24 +12,23 @@ import System.Environment
 import System.Time
 import Control.Concurrent (forkIO)
 import Control.Concurrent.STM
+import Control.Proxy.STM
+import Control.Proxy.Concurrent
 
-
-main = 	withContext 1 $ \context -> do
-  (ip:name:_) <- getArgs
-  extraRequests <- any (== "--use-extra-requests") `liftM` getArgs 
-  print extraRequests
+main = do	
+  (ip:port:_) <- getArgs
   t0 <- getClockTime
   t0' <- newTVarIO t0 
   putStrLn' "Connecting to Pong server..."  
-  let which = case name of
-        "9111" -> Right ()
-        "7201" -> Left ()
-  withSocket context Req $ \socket -> do
-    connect socket ("tcp://" ++ ip ++ ":" ++ name)
+  (fifoIn, fifoOut) <- spawn  Unbounded
+  connect ip port $ \(sock, addr) -> do
+    let paddleSide = case port of
+          "9111" -> Right ()
+          "7201" -> Left ()
     putStrLn' "Connected"
     init <- initWorld socket
     forkIO $ tightLoop socket
-    playIO (InWindow "Pong" (1000, 1000) (10,10)) black 10 (init) (makePic socket)(moveit t0' socket which) (stepWorld socket extraRequests)
+    playIO (InWindow "Pong" (1000, 1000) (10,10)) black 10 (init) (makePic socket)(moveit t0' socket paddleSide) (stepWorld socket extraRequests)
   			    
 
 tightLoop :: Socket Req -> IO ()

@@ -16,14 +16,14 @@ import Network
 
 main :: IO ()
 main = do	
-  (ip:port:_) <- getArgs
+  (ip:paddlePref:_) <- getArgs
   t0 <- getClockTime
   t0' <- newTVarIO t0 
   putStrLn' "Connecting to Pong server..."  
-  let paddleSide = case port of
-        "9111" -> Right ()
-        "7201" -> Left ()
-  h <- connectTo ip (PortNumber (fromIntegral (read port :: Int)))
+  let paddleSide = case paddlePref of
+        "Right" -> Right ()
+        "Left" -> Left ()
+  h <- connectTo ip (PortNumber pongPort)
   putStrLn' "Connected"
   initW <- initWorld h
   playIO (InWindow "Pong" (1000, 1000) (10,10)) black 10 (initW) (makePic h)(moveit t0' h paddleSide) (stepWorld h)

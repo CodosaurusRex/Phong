@@ -16,6 +16,7 @@ import Control.Concurrent.STM.TChan
 import Control.Concurrent.MVar
 import Network
 
+
 main :: IO ()
 main = do	
   (ip:paddlePref:_) <- getArgs
@@ -84,7 +85,7 @@ drawit :: World -> Picture
 drawit (World b p1 p2 _) = Pictures [(drawB b), (drawp p1), (drawp p2)]
 
 drawB :: Ball -> Picture
-drawB (Ball (x,y) _) = Color white $ Translate x y $ circleSolid 10
+drawB (Ball (x,y) _ (s1, s2)) = Pictures [Color white $ Translate x y $ circleSolid 10, Translate (-100) 485 $ Scale 0.1 0.1 $ Color white $ Text ("Score 1: " ++ (show s1)), Translate 0 485 $ Scale 0.1 0.1 $ Color white $ Text ("Score 2: " ++ (show s2))]
 
 drawp :: Player -> Picture
 drawp (Player (x,y) _) = Color white $Translate x y $ polygon (rectanglePath 20 100)

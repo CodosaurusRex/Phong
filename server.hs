@@ -11,6 +11,7 @@ import Data.Serialize
 import Graphics.Gloss
 import Control.Concurrent.STM
 import Graphics.Gloss.Data.Vector
+import PhongPhysics
 import Network
 import Control.Concurrent.MVar
 import GHC.IO.Handle hiding (hGetLine)
@@ -70,7 +71,8 @@ main = do
 
 -- Placeholder for real world-stepping
 stepWorld :: Float -> World -> World
-stepWorld dt w@(World b@(Ball (x,y) (vx, vy)) _ _ _ ) = w { ball = Ball ((x + (dt * vx)), (y + (dt*vy))) ((vx- 0.01),(vy- 0.01)) }
+stepWorld dt w@(World b@(Ball (x,y) (vx, vy) (s1,s2)) _ _ _ ) = 
+  w { ball = Ball ( (x + (dt * vx)), (y + (dt*vy))) ((vx- 0.01),(vy- 0.01)) (s1,s2) }
 
 runThroughTime :: Float -> TVar World -> IO ()
 runThroughTime dt worldT = forever $ do 

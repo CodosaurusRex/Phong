@@ -17,7 +17,7 @@ pongPort :: PortNumber
 pongPort = 5227
 
 initi :: World
-initi = World (Ball (0,0) (0.02,0)) (Player (-500,0) 0) (Player (500,0) 0) True
+initi = World (Ball (0,0) (0.02,0) (0,0)) (Player (-500,0) 0) (Player (500,0) 0) True
 
 sendWithSize :: (Serialize a, Show a) => Handle -> a -> IO ()
 sendWithSize h a = do
@@ -42,23 +42,6 @@ getWithSize h = do
   putStrLn' $ "Reading " ++ show s ++ " bytes.  They are: " ++ show a'
   return $ decode a' 
 
-{-
-socketSizedWriteD :: (Proxy p) => Socket -> x -> p x B.ByteString x B.ByteString IO r
-socketSizedWriteD sock = runIdentityK loop where
-  loop x = do
-    a <- request x
-    lift $ sendWithSize sock a
-    respond a >>= loop
-
-socketSizedReadS :: (Proxy p, Serialize a) => Socket -> () -> Producer p a IO ()
-socketSizedReadS sock () = runIdentityP loop where
-  loop = do
-    p <- lift $ recvWithSize sock
-    case p of
-      Right v -> respond v >> loop
-      Left  _ -> return ()
--}
-
 data Request = PosUpdate WhichPaddle Point | StateUp | ToggleRunning deriving (Show, Read)
 
 type WhichPaddle = Either () ()
@@ -73,6 +56,7 @@ data Player = Player
 data Ball = Ball 
      	    {  point  ::  (Float, Float)  --place in space
      	      ,vector :: (Float, Float)  --movement Vector
+              ,score :: (Float, Float)
 	    } 
           deriving (Show, Read)
 
@@ -105,14 +89,15 @@ instance Serialize World where
 	    	    	  	     p1 <- get
 				     p2 <- get
                                      r  <- get
-				     return (World b p1 p2 r) 
-
+				     return (World b p1 p2 r)
 instance Serialize Ball where
-	 put (Ball (x,y) (a,b)) = do  put (x,y)
-	     	   	 	      put (a,b)
+	 put (Ball (x,y) (a,b) (s1, s2)) = do put (x,y)
+                                              put (a,b)
+                                              put (s1, s2)
 	 get = 			do (x,y) <- get
 	    	    	  	   (a,b) <- get
-				   return (Ball (x,y) (a,b))
+                                   (s1, s2) <- get
+				   return (Ball (x,y) (a,b) (s1, s2))
 
 instance Serialize Player where
 	 put (Player (x,y) v) = do put (x,y)

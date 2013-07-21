@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module PhongCommon where
 
 import Graphics.Gloss
@@ -9,24 +11,38 @@ import Network
 import Network.Simple.TCP
 import Control.Proxy
 import Control.Proxy.TCP
+import System.IO
 
 pongPort :: PortNumber
 pongPort = 5227
 
-sendWithSize :: (Serialize a) => Socket -> a -> IO ()
-sendWithSize sock v = do
-  let v' = encode v
-  send sock $ encode (B.length v' :: Int)
-  send sock v'
+initi :: World
+initi = World (Ball (0,0) (0.02,0)) (Player (-500,0) 0) (Player (500,0) 0) True
 
-recvWithSize :: (Serialize a) => Socket -> IO (Either String a)
-recvWithSize sock = do
+sendWithSize :: (Serialize a, Show a) => Handle -> a -> IO ()
+sendWithSize h a = do
+  let a' = encode a
+      a'size = B.length a'
+  putStrLn' $ "encode a'size is: " ++ show (encode a'size)
+  B.hPut h $ encode a'size
+  B.hPut h a'
+  hFlush h
+  putStrLn' $ Prelude.unwords ["Encoded", show a, "to", show a'size, "bytes."]
+  hFlush h
+
+getWithSize :: (Serialize a, Show a) => Handle -> IO (Either String a)
+getWithSize h = do
   let intEncodedSize = B.length (encode (1 :: Int))
-  p' <- recv sock intEncodedSize
-  case p' of
-    Nothing -> return $ Left "Receive error"
-    Just v'  -> return $ decode v'
+  putStrLn' $ "Reading " ++ show intEncodedSize ++ " bytes."
+  s' <- B.hGet h intEncodedSize
+  putStrLn' $ "Read these bytes " ++ show s'
+  let (Right s) = decode s' :: Either String Int
+  putStrLn' $ "Read them and decoded " ++ show s
+  a' <- B.hGet h s
+  putStrLn' $ "Reading " ++ show s ++ " bytes.  They are: " ++ show a'
+  return $ decode a' 
 
+{-
 socketSizedWriteD :: (Proxy p) => Socket -> x -> p x B.ByteString x B.ByteString IO r
 socketSizedWriteD sock = runIdentityK loop where
   loop x = do
@@ -41,6 +57,7 @@ socketSizedReadS sock () = runIdentityP loop where
     case p of
       Right v -> respond v >> loop
       Left  _ -> return ()
+-}
 
 data Request = PosUpdate WhichPaddle Point | StateUp | ToggleRunning deriving (Show, Read)
 
@@ -123,6 +140,7 @@ instance Serialize Request where
                      2 -> return (ToggleRunning)
                      n -> error $ "Tried to decode unknown constructor: #" ++ show n
 
+--putStrLn' = putStrLn
 
 putStrLn':: String -> IO ()
 putStrLn' = const $ return () 

@@ -16,33 +16,50 @@ import Network
 import Control.Concurrent.MVar
 import GHC.IO.Handle hiding (hGetLine)
 
-talkWith :: Handle -> MVar () -> TVar World -> IO ()
-talkWith h syncMV w' = do
-  hSetBuffering h LineBuffering
+talkWith :: Handle -> TVar World -> IO ()
+talkWith h w' = do
+  putStrLn' $ "talking with " ++ show h
+  hSetBuffering h NoBuffering
   forever $ do
-    _ <- takeMVar syncMV
-    req' <- hGetLine h
-    case decode req' of
+    putStrLn' $ show h ++ ": getWithSize"
+    req' <- getWithSize h
+    putStrLn' $ "Got line: " ++ show req'
+    case req' of
       Right req -> do resp <- handleRequest req w'
-                      hPutStrLn h (encode resp)
-      Left _    -> Prelude.putStrLn $ "Bad request: " ++ show req'
-    putMVar syncMV ()
+                      putStrLn' $ "About to send encode of: " ++ show resp
+                      sendWithSize h (encode resp)
+                      putStrLn' $ "Its encoding is: " ++ show (encode resp)
+                      let testDecode = decode (encode resp) :: Either String World
+                      putStrLn' $ "Its encode decodes to: " ++ show testDecode
+      Left _    -> error $ "Bad request: " ++ show req'
       
 
+summarizeHandle :: Handle -> IO ()
+summarizeHandle h = do
+  putStrLn' $ "Handle: " ++ show h
+  bf <- hGetBuffering h
+  putStrLn' $ "Buffering: " ++ show bf
+  en <- hGetEncoding h
+  putStrLn' $ "Encoding: " ++ show en
+
 -- |Update or just retrieve world according to request
-handleRequest :: Request -> TVar World -> IO (Maybe World)
-handleRequest r@(PosUpdate _ _)  w' = movePaddle r w' >> return Nothing
-handleRequest ToggleRunning      w' = atomically $ do
+handleRequest :: Request -> TVar World -> IO World
+handleRequest r@(PosUpdate _ _)  w' = do
+  movePaddle r w' 
+  readTVarIO w'
+handleRequest ToggleRunning w' = atomically $ do
   w <- readTVar w'
   writeTVar w' (w {isRunning = not(isRunning w)})
-  return Nothing
+  return w
 handleRequest StateUp w'            = do
   w <- atomically $ readTVar w'
-  return $ Just w
+  error "Warning, got StateUp, but we don't expect to see this constructor anymore."
+  return w
   
 main :: IO ()
 main = do
   myWorld <- atomically $ newTVar initi
+  forkIO $ runThroughTime 0.01 myWorld
   putStrLn' "Accepting to Clients..."
   sock <- listenOn (PortNumber pongPort)
   forever $ do
@@ -58,10 +75,10 @@ initi = World (Ball (0,0) (180,0) (0,0)) (Player (-500,0) 0) (Player (500,0) 0) 
 -- Placeholder for real world-stepping
 stepWorld :: Float -> World -> World
 stepWorld dt w@(World b@(Ball (x,y) (vx, vy) score) p1 p2 _ ) = w { ball = collidePaddle (Ball ((x + (dt * vx)), (y + (dt*vy))) ((vx),(vy)) score) p1 p2}
-
+    
 runThroughTime :: Float -> TVar World -> IO ()
 runThroughTime dt worldT = forever $ do 
-  putStrLn' "time steppp"
+--  putStrLn' "time steppp"
   threadDelay $ floor (dt * 1000000)
   atomically $ do
     w <- readTVar worldT

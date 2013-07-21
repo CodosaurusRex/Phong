@@ -12,50 +12,74 @@ import System.Environment
 import System.Time
 import Control.Concurrent (forkIO)
 import Control.Concurrent.STM
+import Control.Concurrent.STM.TChan
+import Control.Concurrent.MVar
 import Network
 
 
 main :: IO ()
 main = do	
   (ip:paddlePref:_) <- getArgs
-  t0 <- getClockTime
-  t0' <- newTVarIO t0 
+  nextPosRequest' <- newTVarIO $ dummyRequest
+  hSync <- newMVar ()
   putStrLn' "Connecting to Pong server..."  
   let paddleSide = case paddlePref of
         "Right" -> Right ()
         "Left" -> Left ()
   h <- connectTo ip (PortNumber pongPort)
   putStrLn' "Connected"
-  initW <- initWorld h
-  playIO (InWindow "Pong" (1000, 1000) (10,10)) black 10 (initW) (makePic h)(moveit t0' h paddleSide) (stepWorld h)
+  initW <- initWorld h nextPosRequest' hSync
+  playIO (InWindow "Pong" (1000, 1000) (10,10)) 
+    black 10 (initW) (makePic h nextPosRequest' hSync) 
+    (moveit nextPosRequest' paddleSide) (stepWorld)
   			    
+dummyRequest :: Request
+dummyRequest = PosUpdate (Right ()) (0,0)
 
-reqStateUp :: Handle -> IO World
-reqStateUp h = do
-	putStrLn' "About to request from stateupdate"
-	hPutStrLn h (encode (StateUp))
-	putStrLn' "sent stateupdate request"
-	reply <- hGetLine h
-	putStrLn' "received stateupdate reply from server"
-        --print (decode reply :: Either String World)
-	case decode reply of 
-	     Right w -> return w
-	     Left s -> error ("gtfo" ++ s)
+reqStateUp :: Handle -> TVar Request -> MVar () -> IO World
+reqStateUp h nextPosRequest' hSync = withMVar hSync $ \_ -> do
+  nextPosRequest <- readTVarIO nextPosRequest'
+  putStrLn' $ "About to request from stateupdate: " ++ show nextPosRequest
+  sendWithSize h nextPosRequest
+  putStrLn' $ "sent stateupdate request"
+  _ <- hGet h 8  -- HACK: WHY DO I HAVE TO DO THIS? 
+  reply' <- getWithSize h
+  putStrLn' $ "got line: " ++ show reply'
+  case reply' of 
+    Right reply -> return reply
+--    Right Nothing  -> do
+--      putStrLn' "Requested state from server, got nothing."
+--      return initi
+    Left s -> do 
+      putStrLn' $ "Bad decode on response to reqStateUp" ++ s ++ " : " ++ show reply'
+      return initi
              
              
-reqMove :: Handle -> Request -> IO World
+{-
+reqMove :: TVar Request -> Request -> TVar Request -> IO World
 reqMove h pos = do
   putStrLn' "move requested"
   hPutStrLn h (encode (pos))
   reply <- hGetLine h
-  seq reply (reqStateUp h)
+  case (decode reply :: Either String (Maybe World)) of
+    Right Nothing -> do
+      putStrLn' "Expected Nothing from server, got Nothing"
+      return initi
+    Right (Just w) -> do
+      putStrLn' $ "Expected Nothing from server, got world " ++ show w
+      return initi
+    Left _ -> do 
+      putStrLn' "Bad decode on server's response to move request"
+      return initi
+--  seq reply (reqStateUp h)
+-}
 
+initWorld :: Handle -> TVar Request -> MVar () -> IO World
+initWorld = reqStateUp
 
-initWorld :: Handle -> IO World
-initWorld socket= reqStateUp socket
-
-makePic :: Handle -> World -> IO Picture
-makePic socket _ = drawit `liftM` (reqStateUp socket) 
+makePic :: Handle -> TVar Request -> MVar () -> World -> IO Picture
+makePic h nextPosRequest' hSync _ =  drawit `liftM` (reqStateUp h nextPosRequest' hSync) 
+--makePic h hSync _ = drawit `liftM` (reqStateUp h) 
 
 drawit :: World -> Picture
 drawit (World b p1 p2 _) = Pictures [(drawB b), (drawp p1), (drawp p2)]
@@ -66,20 +90,15 @@ drawB (Ball (x,y) _ (s1, s2)) = Pictures [Color white $ Translate x y $ circleSo
 drawp :: Player -> Picture
 drawp (Player (x,y) _) = Color white $Translate x y $ polygon (rectanglePath 20 100)
 
-moveit :: TVar ClockTime -> Handle -> WhichPaddle->Event -> World -> IO World
-moveit t0' h which (EventMotion(x, y)) w =  do
-  t1 <- getClockTime
-  dt <- atomically $ do
-        t0 <- readTVar t0'
-        writeTVar t0' t1
-        return $ diffClockTimes t1 t0
-  if dt > (TimeDiff 0 0 0 0 0 0 10000000000) -- 500 milliseconds
-    then reqMove h (PosUpdate which (x,y))
-    else return w
-moveit _ s which a w = return w -- Ignore all except mouse motion events
+moveit :: TVar Request -> WhichPaddle -> Event -> World -> IO World
+moveit nextPosRequest' which (EventMotion(x, y)) w = do
+  atomically $ writeTVar nextPosRequest' (PosUpdate which (x,y))
+  return w
+moveit _ _ _ w = return w -- Ignore all except mouse motion events
 
-stepWorld :: Handle -> Float -> World -> IO World
-stepWorld _ _ w = return w
+stepWorld :: Float -> World -> IO World
+stepWorld _ w = return w
+--stepWorld _ hSync _ w = return w
 
 {- 
 stepWorld :: Socket Req -> Bool -> Float -> World -> IO World

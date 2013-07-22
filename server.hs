@@ -13,6 +13,7 @@ import Control.Concurrent.STM
 import Graphics.Gloss.Data.Vector
 import PhongPhysics
 import Network
+import Network.Socket hiding (accept)
 import Control.Concurrent.MVar
 import GHC.IO.Handle hiding (hGetLine)
 
@@ -62,6 +63,7 @@ main = do
   forkIO $ runThroughTime 0.01 myWorld
   putStrLn' "Accepting to Clients..."
   sock <- listenOn (PortNumber pongPort)
+  setSocketOption sock NoDelay 1
   forever $ do
     (handle, host, port) <- accept sock
     Prelude.putStrLn $ Prelude.unwords 

@@ -67,6 +67,7 @@ main = do
     Prelude.putStrLn $ Prelude.unwords 
       ["Got connection from ",show handle, show host, show port]
     syncMV <- newMVar ()
+<<<<<<< HEAD
     forkIO $ talkWith handle syncMV myWorld
 
 initi :: World
@@ -76,6 +77,15 @@ initi = World (Ball (0,0) (180,0) (0,0)) (Player (-500,0) 0) (Player (500,0) 0) 
 stepWorld :: Float -> World -> World
 stepWorld dt w@(World b@(Ball (x,y) (vx, vy) score) p1 p2 _ ) = w { ball = collidePaddle (Ball ((x + (dt * vx)), (y + (dt*vy))) ((vx),(vy)) score) p1 p2}
     
+=======
+    forkIO $ talkWith handle myWorld
+
+-- Placeholder for real world-stepping
+stepWorld :: Float -> World -> World
+stepWorld dt w@(World b@(Ball (x,y) (vx, vy) (s1,s2)) _ _ _ ) = 
+  w { ball = Ball ( (x + (dt * vx)), (y + (dt*vy))) ((vx- 0.01),(vy- 0.01)) (s1,s2) }
+
+>>>>>>> 3f51159974cf6b2250c31c928e2b77633b81529e
 runThroughTime :: Float -> TVar World -> IO ()
 runThroughTime dt worldT = forever $ do 
 --  putStrLn' "time steppp"

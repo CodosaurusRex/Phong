@@ -34,15 +34,6 @@ talkWith h w' = do
                       putStrLn' $ "Its encode decodes to: " ++ show testDecode
       Left _    -> error $ "Bad request: " ++ show req'
       
-
-summarizeHandle :: Handle -> IO ()
-summarizeHandle h = do
-  putStrLn' $ "Handle: " ++ show h
-  bf <- hGetBuffering h
-  putStrLn' $ "Buffering: " ++ show bf
-  en <- hGetEncoding h
-  putStrLn' $ "Encoding: " ++ show en
-
 -- |Update or just retrieve world according to request
 handleRequest :: Request -> TVar World -> IO World
 handleRequest r@(PosUpdate _ _)  w' = do
@@ -73,9 +64,13 @@ main = do
 
 -- Placeholder for real world-stepping
 stepWorld :: Float -> World -> World
-stepWorld dt w@(World b@(Ball (x,y) (vx, vy) (s1,s2)) _ _ _ ) = 
-  w { ball = Ball ( (x + (dt * vx)), (y + (dt*vy))) ((vx- 0.01),(vy- 0.01)) (s1,s2) }
+stepWorld dt w@(World b@(Ball (x,y) (vx, vy) (s1,s2)) p1 p2 _ ) =
+  let b' = b { point=(x + vx*dt, y + vy*dt) }
+      b'' = collidePaddle b' p1 p2
+  in
+  w { ball = b'' }
 
+    
 runThroughTime :: Float -> TVar World -> IO ()
 runThroughTime dt worldT = forever $ do 
 --  putStrLn' "time steppp"
@@ -88,9 +83,9 @@ movePaddle :: Request -> TVar World -> IO ()
 movePaddle (PosUpdate p (x,y)) wt = 
   atomically $ do w@(World b p1 p2 r)<- readTVar wt
                   let newWorld = case p of
-                        Right () -> 
-                          w {player1 = p1 {padpoint= (-500, y)}}
                         Left () -> 
+                          w {player1 = p1 {padpoint= (-500, y)}}
+                        Right () -> 
                           w {player2 = p2 {padpoint=  (500, y)}}
                   writeTVar wt newWorld
 

@@ -33,6 +33,6 @@ collideWall b@(Ball (x,y) (vx, vy) (s1, s2))
 
 checkScore:: Ball -> Ball
 checkScore  (Ball (x,y) (vx, vy) (s1, s2))
-  |x > 500 = (Ball (0,0) (-180,0) (s1, s2+1))
-  |x < -500 = (Ball (0,0) (180,0) (s1+1, s2))
+  |x > 500 = (Ball (0,0) (-40,0) (s1, s2+1))
+  |x < -500 = (Ball (0,0) (40,0) (s1+1, s2))
   |otherwise = Ball (x, y) (vx, vy) (s1, s2)

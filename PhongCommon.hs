@@ -17,7 +17,7 @@ pongPort :: PortNumber
 pongPort = 5227
 
 initi :: World
-initi = World (Ball (0,0) (40,2) (0,0)) (Player (-500,0) 0) (Player (500,0) 0) True
+initi = World (Ball (0,0) (120,0) (0,0)) (Player (-500,0) 0) (Player (500,0) 0) True
 
 sendWithSize :: (Serialize a, Show a) => Handle -> a -> IO ()
 sendWithSize h a = do
